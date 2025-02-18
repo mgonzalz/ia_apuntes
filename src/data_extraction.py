@@ -1,11 +1,8 @@
 import pyodbc
 import pandas as pd
 import os
-from dotenv import load_dotenv
 
-load_dotenv() # Cargar variables de entorno desde .env
-
-# Configuración segura de conexión a Azure SQL.
+# Tomar las variables de entorno definidas en GitHub Actions.
 SERVER = os.getenv("SERVER")
 DATABASE = os.getenv("DATABASE")
 DRIVER = os.getenv("DRIVER")

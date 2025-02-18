@@ -13,5 +13,9 @@ venv: set-permissions # Creación de un entorno virtual.
 install: venv # Instalación de dependencias.
 	$(ACTIVATE) && $(PYTHON) -m pip install -r requirements.txt
 
+connect: # Conexión a la base de datos.
+	$(ACTIVATE) && $(PYTHON) src/data_extraction.py
+
 clean: # Limpiar archivos.
+	rm -f data/raw/IA_PROPENSITY_TRAIN.csv
 	rm -rf $(VENV_DIR)
