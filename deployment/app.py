@@ -28,16 +28,41 @@ st.title("Segmentación de Clientes basada en Propensión de Compra")
 st.sidebar.header("Carga de Datos")
 
 # Cargar archivo CSV
+# Ruta del archivo de ejemplo
+example_path = os.path.join("data", "raw", "IA_PROPENSITY_INPUT.csv")
+# Opción para usar un archivo de ejemplo
+use_example = st.sidebar.checkbox("Usar archivo de ejemplo")
+# Cargar archivo CSV
 uploaded_file = st.sidebar.file_uploader("Sube un archivo CSV", type=["csv"])
+# Inicializar df como None
+df = None
+if use_example:
+    if os.path.exists(example_path):
+        df = pd.read_csv(example_path, index_col=0)
+        st.sidebar.success("Archivo de ejemplo cargado correctamente")
+    else:
+        st.sidebar.error(f"El archivo de ejemplo no se encontró en {example_path}.")
+elif uploaded_file is not None:
+    df = pd.read_csv(uploaded_file, index_col=0)
+    st.sidebar.success("Archivo cargado correctamente")
+
 # Cargar modelo XGBoost
 model_path = os.path.join("models", "xgboost.pkl")
 model = joblib.load(model_path)
 expected_columns = model.get_booster().feature_names
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file, index_col=0)
+if df is not None:
     st.sidebar.success("Archivo cargado correctamente")
-    
+    # Lista de columnas a eliminar si existen
+    cols_to_drop = ['Mas_1_coche', 'Tiempo']
+
+    # Verifica qué columnas de la lista están en el DataFrame
+    cols_presentes = list(set(cols_to_drop) & set(df.columns))
+
+    # Si hay columnas en la intersección, se eliminan
+    if cols_presentes:
+        df.drop(columns=cols_presentes, inplace=True)
+
     # Preprocesamiento de datos
     preprocessor = DataPreprocessor(df)
     df = preprocessor.preprocess()
