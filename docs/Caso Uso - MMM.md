@@ -62,7 +62,15 @@ Aunque `Unique_visitors` es la variable objetivo del Objetivo 1, también debe u
 Al incluir `Unique_visitors` en el modelo:
 
 ```python
-Sales = B0 + B1*INTERNET + B2*RADIO + B3*Unique_visitors + error
+Sales_t = β0 \
+        + β1 * Budget_Online{t-1} \
+        + β2 * Budget_Offline{t-1} \
+        + β3 * Budget_Otros{t-1} \
+        + β4 * Unique_visitors{t-1} \
+        + β5 * working_days_t \
+        + β6 * Dias_fines_semana_t \
+        + β7 * Easterweek_t \
+        + error
 ```
 
 - Se mejora la capacidad explicativa del modelo.
