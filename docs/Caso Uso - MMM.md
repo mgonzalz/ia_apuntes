@@ -1,10 +1,17 @@
-# **Caso de Uso: Predicción de Tráfico Web y Optimización de Inversión Publicitaria en Retail.**
+# **Caso de Uso: Predicción de Tráfico Web, Visitas a Tienda y Ventas Físicas en Retail.**
 
 ## **Relación entre Objetivo 1 y Objetivo 2.**
 
-Este caso de uso aborda dos objetivos interrelacionados, aplicando técnicas de series temporales y modelización de atribución publicitaria para optimizar la inversión en marketing y maximizar el impacto en ventas y tráfico.
+Este caso de uso aborda dos objetivos interrelacionados, aplicando técnicas de series temporales y modelización de atribución publicitaria para optimizar la inversión en marketing y maximizar el impacto tanto en el tráfico como en los resultados comerciales.
 
-### **Objetivo 1: Predicción del Tráfico Web.**
+La conexión entre ambos objetivos es fundamental para construir un modelo lógico de atribución completo:
+
+1. El **tráfico web forecast (Objetivo 1)** se utiliza como input en el modelo de visitas a tienda (Objetivo 2.1).
+2. Las **visitas estimadas a tienda** se utilizan como input para estimar las ventas (Objetivo 2.2).
+3. Se construye así una cadena causal completa:
+   > Publicidad → Tráfico Web → Visitas a Tienda → Ventas
+
+## **Objetivo 1: Predicción del Tráfico Web.**
 
 **Propósito**: Estimar el número de visitantes únicos a la web (`Unique_visitors`) durante los próximos 6 meses mediante un modelo de series temporales SARIMA.
 
@@ -15,7 +22,7 @@ Este caso de uso aborda dos objetivos interrelacionados, aplicando técnicas de 
 
 **Modelo sugerido**: SARIMA, incorporando:
 
-- Tendencia, estacionalidad y ruido,
+- Tendencia, estacionalidad y ruido.
 - Regresores exógenos (eventos y calendario).
 
 **Métricas de evaluación**:
@@ -23,98 +30,99 @@ Este caso de uso aborda dos objetivos interrelacionados, aplicando técnicas de 
 - MSE (Error Cuadrático Medio),
 - AIC (Criterio de Información de Akaike).
 
-> Recomendación: No es necesario un EDA exhaustivo, se prioriza la descomposición de la serie, la identificación de parámetros y la calidad del pronóstico.
+> Recomendación: No es necesario un EDA exhaustivo. Se prioriza la descomposición de la serie, la identificación de parámetros y la calidad del pronóstico.
 
 **Resultado clave**: una serie forecast de `Unique_visitors` a futuro.
 
-### **Objetivo 2: Modelo de Atribución Publicitaria (MMM).**
+## **Objetivo 2: Modelo en dos etapas - Visitas a tienda y ventas.**
 
-**Propósito**: Estimar el impacto de la inversión publicitaria en los resultados comerciales y optimizar la distribución del presupuesto entre canales.
+### **Etapa 1: Modelo de Visitas a Tienda (`Visit_Store`).**
 
-### **Elección de la Variable Objetivo (`y`)**
+**Propósito**: Estimar el impacto de la inversión publicitaria y el tráfico web en el tráfico físico a tienda (`Visit_Store`).
 
-| Variable              | Qué mide                                             | Cuándo usarla                                  |
-|-----------------------|------------------------------------------------------|-------------------------------------------------|
-| `Visit_Store`         | Tráfico físico a tienda (personas que entran)       | Si se quiere **atraer visitas a tienda**        |
-| `Sales`               | Ventas totales (número de transacciones en tienda)  | Si se busca **maximizar ventas**               |
-| `Sales / Visit_Store`| Tasa de conversión (eficacia de las visitas)        | Si se desea analizar la **eficiencia** del canal|
+**Variable objetivo (`y`)**: `Visit_Store`.
 
-**Recomendación**:
+**Variables explicativas**:
 
-- Usar `Sales` como variable objetivo principal, ya que representa directamente el éxito comercial.
-- Se puede complementar con el análisis de `Sales / Visit_Store` si se desea profundizar en la conversión.
+- `Budget_Online`.
+- `Budget_Offline`.
+- `Budget_Otros`.
+- `Unique_visitors`.
+- Variables Exógenas.
 
-### **Variables explicativas**:
+**Modelo sugerido**: Regresión múltiple o Ridge Regression (si hay multicolinealidad).
 
-- Publicidad (`INV`): INTERNET, RADIO, PLATAFORMAS VIDEO, etc.
-- Factores temporales (`TIME`).
-- `Unique_visitors` (resultado del Objetivo 1 o histórico durante el entrenamiento).
-
-### **¿Por qué incluir `Unique_visitors` como variable explicativa?**
-
-Aunque `Unique_visitors` es la variable objetivo del Objetivo 1, también debe utilizarse como variable explicativa en el modelo del Objetivo 2, por las siguientes razones:
-
-- La publicidad muchas veces no impacta directamente en las ventas, sino a través de un paso intermedio: el tráfico web.
-- Es decir, muchos clientes **primero visitan la web** antes de comprar en tienda.
-
-> Publicidad → Visitas Web → Visitas Tienda → Ventas
-
-Al incluir `Unique_visitors` en el modelo:
+**Fórmula base del modelo 1**:
 
 ```python
-Sales_t = β0 \
-        + β1 * Budget_Online{t-1} \
-        + β2 * Budget_Offline{t-1} \
-        + β3 * Budget_Otros{t-1} \
-        + β4 * Unique_visitors{t-1} \
-        + β5 * working_days_t \
-        + β6 * Dias_fines_semana_t \
-        + β7 * Easterweek_t \
+Visit_Store_t = β0 \
+              + β1 * Budget_Online \
+              + β2 * Budget_Offline \
+              + β3 * Budget_Otros \
+              + β4 * Unique_visitors \
+              + β5 * DirectTraffic \
+              + β6 * v_exógena1_t \
+              + β7 * v_exógena2_t \
+              + ... +
+              + error
+```
+
+> Este modelo permite conocer qué canales y variables explicativas generan mayor volumen de visitas físicas en tienda, permitiendo una optimización posterior de medios.
+
+### **Etapa 2: Modelo de Ventas (`Sales`) a partir de `Visit_Store`.**
+
+**Propósito**: Estimar las ventas mensuales a partir del tráfico físico a tienda.
+
+**Variable objetivo (`y`)**: `Sales`.
+
+**Variables explicativas**:
+
+- `Visit_Store_t`.
+- Variables Exógenas.
+
+**Modelo sugerido**: Regresión lineal simple o múltiple, según resultados.
+
+**Fórmula base del modelo 2**:
+
+```python
+Sales_t = α0 \
+        + α1 * Visit_Store_t \
+        + α2 * v_exógena1_t \
+        + α3 * v_exógena2_t \
+        + α4 * v_exógena3_t \
+        + ... +
         + error
 ```
 
-- Se mejora la capacidad explicativa del modelo.
-- Se refleja mejor el recorrido real del cliente (customer journey).
+> Esta segunda etapa añade una capa de realismo al customer journey: de la inversión a la visita, y de la visita a la compra.
 
-Si no se incluye:
+### **Razón del enfoque en dos etapas.**
 
-- El modelo asumiría que la inversión impacta directamente en ventas,
-- Ignorando una parte importante del efecto mediado por lo digital.
+- Refleja mejor la cadena causal del comportamiento del consumidor:
+  > Publicidad → Tráfico Web → Visitas a Tienda → Ventas
 
-### **Modelo sugerido**:
+- Permite identificar cuánto influye la publicidad en cada fase del proceso.
+- Aporta flexibilidad al análisis (se puede optimizar por fases).
+- A largo plazo, este enfoque permitirá hacer seguimiento del embudo completo de conversión.
 
-- Regresión múltiple o Ridge Regression (por multicolinealidad),
-- Con delays mínimos (por tamaño reducido del dataset: 36 observaciones).
+### **Simulación y optimización.**
 
-### **Condiciones**:
+- Se parte del presupuesto de 2024.
+- Aplicar aumentos del 15%, 21% y 25% según el escenario.
+- Repartir el presupuesto por canal (%).
+- Utilizar `Unique_visitors` forecast para alimentar la primera etapa.
+- Usar las predicciones de `Visit_Store` para estimar `Sales`.
 
-- Coeficientes deben tener lógica de negocio (positivos para inversión),
-- Incorporar saturación o rendimiento decreciente si aplica.
+### **Cuándo usar valores reales vs. forecast.**
 
-### **Simulación y optimización**:
-
-- Redistribuir el presupuesto de 2024 (primeros 6 meses con +15%),
-- Encontrar el punto óptimo de inversión por canal,
-- Evaluar escenarios para maximizar `y` (ventas, tráfico o conversión).
-
-### **Cuándo usar valores reales vs. forecast de `Unique_visitors`**
-
-| Escenario                         | `Unique_visitors` a usar         | Justificación                          |
-|----------------------------------|----------------------------------|----------------------------------------|
-| Entrenamiento del modelo         | Reales (de la tabla WEB)         | Estás usando datos pasados             |
-| Simulación futura (presupuesto)  | Forecast (modelo SARIMA)         | Aún no existen los datos reales futuros|
-
-Esto permite entrenar con datos observados, y luego simular escenarios futuros con los valores previstos por el modelo SARIMA del Objetivo 1.
-
-### **Conexión entre Objetivos.**
-
-1. **El tráfico web forecast (Objetivo 1)** se utiliza como input en el modelo de atribución (Objetivo 2).
-2. **La inversión publicitaria afecta al tráfico web**, y este, a su vez, **impacta en visitas a tienda y ventas**.
-3. El modelo completo refleja una cadena de causalidad de marketing:
-   > Publicidad → Tráfico Web → Tráfico Tienda/Ventas
+| Escenario                         | Datos de `Unique_visitors`     | Datos de `Visit_Store`          |
+|----------------------------------|--------------------------------|---------------------------------|
+| Entrenamiento del modelo         | Reales                         | Reales                          |
+| Simulación futura (presupuesto)  | Forecast (SARIMA)              | Estimado (modelo 1)             |
 
 ## **Enfoque Metodológico General.**
 
-1. **Modelado de serie temporal SARIMA** sobre `Unique_visitors`.
-2. **Construcción de modelo de atribución** con regresores publicitarios y tráfico forecast.
-3. **Optimización del presupuesto** con simulaciones bajo distintos escenarios.
+1. Modelado SARIMA para `Unique_visitors`.
+2. Modelo de regresión para `Visit_Store` con marketing y web.
+3. Modelo de `Sales` en función de `Visit_Store`.
+4. Simulación y optimización de escenarios futuros.
